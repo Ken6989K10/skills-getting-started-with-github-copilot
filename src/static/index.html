@@ -1,50 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
     <title>Mergington High School Activities</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>Mergington High School</h1>
-      <h2>Extracurricular Activities</h2>
-    </header>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Mergington High School Activities</h1>
+    <div id="activities-container"></div>
+    <script>
+        async function fetchActivities() {
+            const res = await fetch('/activities');
+            const activities = await res.json();
+            const container = document.getElementById('activities-container');
+            container.innerHTML = '';
+            Object.entries(activities).forEach(([name, info]) => {
+                const card = document.createElement('div');
+                card.className = 'activity-card';
+                card.innerHTML = `
+                    <h2>${name}</h2>
+                    <p><strong>説明:</strong> ${info.description}</p>
+                    <p><strong>スケジュール:</strong> ${info.schedule}</p>
+                    <p><strong>定員:</strong> ${info.max_participants}</p>
+                    <div class="participants-section">
+                        <strong>参加者:</strong>
+                        <ul>
+                            ${info.participants.map(p => `<li>${p}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <form onsubmit="signup(event, '${name}')">
+                        <input type="email" name="email" placeholder="あなたのメールアドレス" required>
+                        <button type="submit">参加登録</button>
+                    </form>
+                    <div class="signup-message" id="msg-${name.replace(/\s/g,'_')}"></div>
+                `;
+                container.appendChild(card);
+            });
+        }
 
-    <main>
-      <section id="activities-container">
-        <h3>Available Activities</h3>
-        <div id="activities-list">
-          <!-- Activities will be loaded here -->
-          <p>Loading activities...</p>
-        </div>
-      </section>
+        async function signup(event, activityName) {
+            event.preventDefault();
+            const form = event.target;
+            const email = form.email.value;
+            const msgDiv = document.getElementById('msg-' + activityName.replace(/\s/g,'_'));
+            msgDiv.textContent = '';
+            try {
+                const res = await fetch(`/activities/${encodeURIComponent(activityName)}/signup?email=${encodeURIComponent(email)}`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    msgDiv.textContent = data.message;
+                    msgDiv.className = 'success';
+                    await fetchActivities();
+                } else {
+                    msgDiv.textContent = data.detail;
+                    msgDiv.className = 'error';
+                }
+            } catch (e) {
+                msgDiv.textContent = 'エラーが発生しました';
+                msgDiv.className = 'error';
+            }
+        }
 
-      <section id="signup-container">
-        <h3>Sign Up for an Activity</h3>
-        <form id="signup-form">
-          <div class="form-group">
-            <label for="email">Student Email:</label>
-            <input type="email" id="email" required placeholder="your-email@mergington.edu" />
-          </div>
-          <div class="form-group">
-            <label for="activity">Select Activity:</label>
-            <select id="activity" required>
-              <option value="">-- Select an activity --</option>
-              <!-- Activity options will be loaded here -->
-            </select>
-          </div>
-          <button type="submit">Sign Up</button>
-        </form>
-        <div id="message" class="hidden"></div>
-      </section>
-    </main>
-
-    <footer>
-      <p>&copy; 2023 Mergington High School</p>
-    </footer>
-
-    <script src="app.js"></script>
-  </body>
+        fetchActivities();
+    </script>
+</body>
 </html>
